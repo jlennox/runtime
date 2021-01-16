@@ -345,37 +345,39 @@ namespace System.Net.Sockets
         // Disposes the Tcp connection.
         protected virtual void Dispose(bool disposing)
         {
-            if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 0)
+            if (disposing)
             {
-                if (disposing)
+                if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
                 {
-                    IDisposable? dataStream = _dataStream;
-                    if (dataStream != null)
+                    return;
+                }
+
+                IDisposable? dataStream = _dataStream;
+                if (dataStream != null)
+                {
+                    dataStream.Dispose();
+                }
+                else
+                {
+                    // If the NetworkStream wasn't created, the Socket might
+                    // still be there and needs to be closed. In the case in which
+                    // we are bound to a local IPEndPoint this will remove the
+                    // binding and free up the IPEndPoint for later uses.
+                    Socket chkClientSocket = Volatile.Read(ref _clientSocket);
+                    if (chkClientSocket != null)
                     {
-                        dataStream.Dispose();
-                    }
-                    else
-                    {
-                        // If the NetworkStream wasn't created, the Socket might
-                        // still be there and needs to be closed. In the case in which
-                        // we are bound to a local IPEndPoint this will remove the
-                        // binding and free up the IPEndPoint for later uses.
-                        Socket chkClientSocket = Volatile.Read(ref _clientSocket);
-                        if (chkClientSocket != null)
+                        try
                         {
-                            try
-                            {
-                                chkClientSocket.InternalShutdown(SocketShutdown.Both);
-                            }
-                            finally
-                            {
-                                chkClientSocket.Close();
-                            }
+                            chkClientSocket.InternalShutdown(SocketShutdown.Both);
+                        }
+                        finally
+                        {
+                            chkClientSocket.Close();
                         }
                     }
-
-                    GC.SuppressFinalize(this);
                 }
+
+                GC.SuppressFinalize(this);
             }
         }
 

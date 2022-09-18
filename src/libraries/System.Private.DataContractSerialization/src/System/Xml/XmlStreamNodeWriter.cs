@@ -267,8 +267,7 @@ namespace System.Xml
         {
             if (charCount < bufferLength)
             {
-                int offset;
-                byte[] buffer = GetBuffer(charCount, out offset);
+                byte[] buffer = GetBuffer(charCount, out int offset);
                 Buffer.BlockCopy(chars, charOffset, buffer, offset, charCount);
                 Advance(charCount);
             }
@@ -289,6 +288,13 @@ namespace System.Xml
                     UnsafeWriteUTF8Chars(chars, count);
                 }
             }
+        }
+
+        protected unsafe void WriteUTF8Bytes(ReadOnlySpan<byte> value)
+        {
+            byte[] buffer = GetBuffer(value.Length, out int offset);
+            value.CopyTo(new Span<byte>(buffer, offset, buffer.Length));
+            Advance(value.Length);
         }
 
         protected unsafe void UnsafeWriteUTF8Chars(char* chars, int charCount)
